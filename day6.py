@@ -93,12 +93,10 @@ def find_common_anscestor(a, b):
         dist_from_a += 1
     return common_anscestor, dist_from_a, dist_from_b
 
-
         
 you_parent = find_parent('YOU')
 san_parent = find_parent('SAN')
 
-#find_shortest_path(you_parent, san_parent)
 
 _,dist1,dist2=find_common_anscestor(tree_nodes[you_parent], tree_nodes[san_parent])
 
