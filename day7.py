@@ -6,20 +6,24 @@ puzzle_input = [int(a) for a in txt]
 
 from itertools import permutations 
 l = list(permutations(range(0, 5))) 
-print (l) 
-
     
-    
-# intcode computer function - from Day 5
-def intcode_computer(input_val, program):
+# intcode computer function - from Day 5 with small change 
+# to account for two input values
+def intcode_computer(input_val1, input_val2, program):
     halt = False
+    firstInputUsed = False
     cnt = 0
     output_vals = []
     while halt == False:
         optcode = program[cnt]
         if optcode%10 == 3:
             pointer_increase = 2
-            program[program[cnt+1]] = input_val
+            if not firstInputUsed:
+                program[program[cnt+1]] = input_val1
+                firstInputUsed=True
+            else:
+                program[program[cnt+1]] = input_val2
+            
             
         elif optcode%10 == 4:
             pointer_increase = 2
@@ -87,27 +91,18 @@ def intcode_computer(input_val, program):
             print('Bad opt code')
             break
         cnt += pointer_increase
-    return output_vals[0], program
-
+    
+    return output_vals[0]
 
 
 out_max = 0
 for p in l:
-    # 1st amp.
-    out, prog = intcode_computer(p[0], puzzle_input)
-    out, prog = intcode_computer(out, prog)
-    # 2nd amp.
-    out, prog = intcode_computer(p[1], puzzle_input)
-    out, prog = intcode_computer(out, prog)
-    # 3rd amp.
-    out, prog = intcode_computer(p[2], puzzle_input)
-    out, prog = intcode_computer(out, prog)
-    # 4th amp.
-    out, prog = intcode_computer(p[3], puzzle_input)
-    out, prog = intcode_computer(out, prog)
-    # 5th amp.
-    out, prog = intcode_computer(p[4], puzzle_input)
-    out, prog = intcode_computer(out, prog)
+    out = intcode_computer(int(p[0]), 0, puzzle_input)
+    out = intcode_computer(int(p[1]), out, puzzle_input)
+    out = intcode_computer(int(p[2]), out, puzzle_input)
+    out = intcode_computer(int(p[3]), out, puzzle_input)
+    out = intcode_computer(int(p[4]), out, puzzle_input)
     
     if out>out_max:
         out_max = out
+print(out_max)
