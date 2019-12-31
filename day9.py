@@ -159,4 +159,8 @@ puzzle_input = [int(a) for a in txt]
 puzzle_input += [0 for i in range(100000)]
 #puzzle_input = [109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99]
 output, program = intcode_computer(1, puzzle_input)
-print(output)
+print('part 1 output = ' + str(output))
+
+# part 2:
+output, program = intcode_computer(2, puzzle_input)
+print('part 2 output = ' + str(output))
