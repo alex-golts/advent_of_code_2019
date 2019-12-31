@@ -148,16 +148,10 @@ txt = txt.split('\n')
 txt = txt[0].split(',')
 puzzle_input = [int(a) for a in txt]
 
-#puzzle_input = [109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99]
-#puzzle_input = [1102,34915192,34915192,7,4,7,99,0]
-#puzzle_input= [104,1125899906842624,99]
-#puzzle_input = [109,1,203,11,209,8,204,1,99,10,0,42,0]
-#puzzle_input = [203,3,104,0,99]
-#puzzle_input = [109,5,203,0,104,0,99]
-#puzzle_input = [209, 9,21101, 5, 6, 0,4, 8,-1,8]
 # increase memory:
 puzzle_input += [0 for i in range(100000)]
-#puzzle_input = [109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99]
+
+# part 1:
 output, program = intcode_computer(1, puzzle_input)
 print('part 1 output = ' + str(output))
 
