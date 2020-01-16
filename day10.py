@@ -106,7 +106,7 @@ start_point = best_point
 
 def angle_to_point(start_point, p):
     # find the angle between the vector from start point
-    # to point p, and an upward facing vector (1,0)
+    # to point p, and an upward facing vector (-1,0)
     p = np.array(p)
     sp = np.array(start_point)
     up = np.array((-1,0))
