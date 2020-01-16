@@ -1,9 +1,10 @@
 import numpy as np
+from matplotlib import pyplot as plt
 
 # intcode computer function - from Day 9
 # with changing input_val according to 
 # robot position and grid status
-def intcode_computer(input_val, program):
+def intcode_computer(input_val, program, start_panel_color):
     
     GRID_SIZE = 100
     grid = np.zeros((GRID_SIZE,GRID_SIZE))
@@ -11,6 +12,8 @@ def intcode_computer(input_val, program):
     
     pos = [int(GRID_SIZE/2), int(GRID_SIZE/2)] # row,col
     orientation = 'up'
+    
+    grid[pos[0], pos[1]] = start_panel_color
     
     halt = False
     cnt = 0
@@ -181,7 +184,7 @@ def intcode_computer(input_val, program):
                   ' at position ' + str(cnt))
             break
         cnt += pointer_increase
-    return output_vals, program, grid_painted, pos
+    return output_vals, program, grid, grid_painted, pos
 
 
 f = open('input11.txt','r')
@@ -193,6 +196,12 @@ puzzle_input = [int(a) for a in txt]
 # increase memory:
 puzzle_input += [0 for i in range(100000)]
 
-output, program, grid_painted, pos = intcode_computer(0, puzzle_input)
-
+# Part 1:
+output, program, grid, grid_painted, pos = intcode_computer(0, puzzle_input, start_panel_color=0)
 print('part 1 answer = ' + str(int(np.sum(grid_painted))))
+
+# Part 2:
+output, program, grid, grid_painted, pos = intcode_computer(0, puzzle_input, start_panel_color=1)
+plt.figure()
+plt.imshow(grid)
+plt.show()
