@@ -1,4 +1,5 @@
 import numpy as np
+
 # parse interactions and put in dict
 f = open('input14.txt','r')
 txt = f.read()
@@ -21,11 +22,11 @@ spare_elements = {}
 for key in interactions:
     spare_elements[key] = 0
 spare_elements['ORE'] = 0
-
+spare_elements_start = spare_elements.copy()
 
 def cnt_ore(element, num, spare_elements):
     if num == 0:
-        return 0
+        return 0, spare_elements
     elif element == 'ORE':
         return num
     elif spare_elements[element] >= num:
@@ -47,14 +48,28 @@ def cnt_ore(element, num, spare_elements):
             for key in interactions[element]:
                 if key == 'self':
                     continue
-                cnt += cnt_ore(key, interactions[element][key], spare_elements) 
+                cnt += cnt_ore(key, interactions[element][key], spare_elements)
         return cnt
     
+    
+# Part 1:
+print('part 1 answer = ' + str(cnt_ore('FUEL', 1, spare_elements)))
 
-print(cnt_ore('FUEL', 1, spare_elements))
 
-
-
-
+def cnt_ore_exact(element, num):
+    if element=='ORE':
+        return num
+    else:
+        cnt = 0
+        for key in interactions[element]:
+            if key == 'self':
+                continue
+            cnt += (num/interactions[element]['self'])*cnt_ore_exact(key, interactions[element][key])
+        return cnt
+        
+# Part 2:
+        
+# calculate the 'exact' OREs needed to produce 1 fuel, and divide
+print('part 2 answer = ' + str(int((10**12)/cnt_ore_exact('FUEL', 1))-1))
 
 
