@@ -11,7 +11,6 @@ def intcode_computer(input_val, program):
         optcode = program[cnt]
         if optcode%10 == 3:
             pointer_increase = 2
-            
             if str(optcode).zfill(2)[0] == '2':
                 program[program[cnt+1] + relative_base] = input_val
             else:
@@ -141,20 +140,26 @@ def intcode_computer(input_val, program):
         cnt += pointer_increase
     return output_vals, program
 
+# stuff to run always here such as class/def
+def main():
+    f = open('input9.txt','r')
+    txt = f.read()
+    txt = txt.split('\n')
+    txt = txt[0].split(',')
+    puzzle_input = [int(a) for a in txt]
 
-f = open('input9.txt','r')
-txt = f.read()
-txt = txt.split('\n')
-txt = txt[0].split(',')
-puzzle_input = [int(a) for a in txt]
+    # increase memory:
+    puzzle_input += [0 for i in range(100000)]
 
-# increase memory:
-puzzle_input += [0 for i in range(100000)]
+    # part 1:
+    output, program = intcode_computer(1, puzzle_input)
+    print('part 1 output = ' + str(output))
 
-# part 1:
-output, program = intcode_computer(1, puzzle_input)
-print('part 1 output = ' + str(output))
+    # part 2:
+    output, program = intcode_computer(2, puzzle_input)
+    print('part 2 output = ' + str(output))
 
-# part 2:
-output, program = intcode_computer(2, puzzle_input)
-print('part 2 output = ' + str(output))
+if __name__ == "__main__":
+   # stuff only to run when not called via 'import' here
+   main()
+
