@@ -1,4 +1,5 @@
 from copy import deepcopy
+import collections
 # intcode computer function - from Day 9 but modified for networking
 def intcode_computer(comp_id, input_vals, program, cnt, packet_queue):
     halt = False
@@ -180,8 +181,11 @@ for i in range(50):
         packet_queue[output[0]].append(output[1:])
 
 # normal network operation:
-success = False
-while not success:
+success = False # part 1
+success2 = False # part 2
+nat_packets_y_vals = []
+p1_answer = []
+while not success or not success2:
     for i in range(50):
         output, prog, pnt = intcode_computer(i, [], programs[i], pointers[i], packet_queue)
         programs[i] = prog
@@ -189,10 +193,24 @@ while not success:
         if len(output)>0:
             print(f'computes #{i} sends packet {str(output[1:])} to computer #{output[0]}.')
             if output[0]==255:
-                print(f'part 1 answer = {str(output[2])}')
+                if len(p1_answer)==0: # do this so that this value doesn't keep changing
+                    p1_answer = [output[2]]
+                print(f'part 1 answer = {str(p1_answer[0])}')
                 success = True
-                break
-            packet_queue[output[0]].append(output[1:])
+                nat_packet = output
+            else:
+                packet_queue[output[0]].append(output[1:])
+    lens = [len(item) for item in packet_queue]
+    if sum(lens)==0:
+        # network idle state
+        packet_queue[0].append(nat_packet[1:])
+        nat_packets_y_vals.append(nat_packet[2])
+        dups = [item for item, count in collections.Counter(nat_packets_y_vals).items() if count > 1]
+        if len(dups)>0:
+            print(f'part 2 answer = {str(dups[0])}')
+            success2 = True
+            break  
+        
 
     
 
