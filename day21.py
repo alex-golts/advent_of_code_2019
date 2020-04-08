@@ -200,6 +200,7 @@ def gen_random_cmd():
 # exhaustive search for 4 command sequences:
 def exhaustive_search():
     readable_reg = ['A', 'B', 'C', 'D']
+    end_cmd = 'WALK'
     writeable_reg = ['T', 'J']
     instructions = ['NOT', 'OR', 'AND']
     total_runs = (len(instructions)**4)*((len(readable_reg)+len(writeable_reg))**4)*(len(writeable_reg)**4)
@@ -218,16 +219,64 @@ def exhaustive_search():
                                         
                                         for c4 in instructions:
                                             for c4in1 in readable_reg+writeable_reg:
-                                                for c4in2 in writeable_reg:
+                                                for c4in2 in writeable_reg:    
                                                     cnt+=1
                                                     prog = puzzle_input.copy()
                                                     #prog = deepcopy(puzzle_input)
-                                                    cmd_list = [c1 + ' ' + c1in1 + ' ' + c1in2, c2 + ' ' + c2in1 + ' ' + c2in2, c3 + ' ' + c3in1 + ' ' + c3in2, c4 + ' ' + c4in1 + ' ' + c4in2, 'WALK']
+                                                    cmd_list = [c1 + ' ' + c1in1 + ' ' + c1in2, c2 + ' ' + c2in1 + ' ' + c2in2, c3 + ' ' + c3in1 + ' ' + c3in2, c4 + ' ' + c4in1 + ' ' + c4in2, end_cmd]
                                                     output, program = intcode_computer([str2ascii(item) for item in cmd_list], prog)
                                                     print(str(cnt) + '/' + str(total_runs))
                                                     if len(output)>0:                    
                                                         print('***** DONE *****')
                                                         print(str(output[0]))
                                                         return output[0]
-                                            
+
+def exhaustive_search_p2():
+    readable_reg = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'] # part 2
+    end_cmd = 'RUN'
+    writeable_reg = ['T', 'J'] 
+    instructions = ['NOT', 'OR', 'AND']
+    total_runs = (len(instructions)**6)*((len(readable_reg)+len(writeable_reg))**6)*(len(writeable_reg)**6)
+    cnt=0
+    for c1 in instructions:
+        for c1in1 in readable_reg+writeable_reg:
+            for c1in2 in writeable_reg:
+                
+                for c2 in instructions:
+                    for c2in1 in readable_reg+writeable_reg:
+                        for c2in2 in writeable_reg:
+                            
+                            for c3 in instructions:
+                                for c3in1 in readable_reg+writeable_reg:
+                                    for c3in2 in writeable_reg:
+                                        
+                                        for c4 in instructions:
+                                            for c4in1 in readable_reg+writeable_reg:
+                                                for c4in2 in writeable_reg:   
+                                                    
+                                                    for c5 in instructions:
+                                                        for c5in1 in readable_reg+writeable_reg:
+                                                            for c5in2 in writeable_reg:
+                                                                
+                                                                for c6 in instructions:
+                                                                    for c6in1 in readable_reg+writeable_reg:
+                                                                        for c6in2 in writeable_reg:
+                                                                            
+                                                                            cnt+=1
+                                                                            prog = puzzle_input.copy()
+                                                                            #prog = deepcopy(puzzle_input)
+                                                                            cmd_list = [c1 + ' ' + c1in1 + ' ' + c1in2, c2 + ' ' + c2in1 + ' ' + c2in2, c3 + ' ' + c3in1 + ' ' + c3in2, c4 + ' ' + c4in1 + ' ' + c4in2, c5 + ' ' + c5in1 + ' ' + c5in2, c6 + ' ' + c6in1 + ' ' + c6in2, end_cmd]
+                                                                            output, program = intcode_computer([str2ascii(item) for item in cmd_list], prog)
+                                                                            print(str(cnt) + '/' + str(total_runs))
+                                                                            if len(output)>0:                    
+                                                                                print('***** DONE *****')
+                                                                                print(str(output[0]))
+                                                                                return output[0]                                                                         
+
+
+# part 1 finished after ~7000 iterations
 part1answer = exhaustive_search()
+# part 2 takes too long... need a more efficient solution                                                                              
+#part2answer = exhaustive_search_p2()
+
+
