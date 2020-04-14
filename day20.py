@@ -1,5 +1,4 @@
 import collections
-import numpy as np
 
 f = open('input20.txt','r')
 txt = f.read()
@@ -163,41 +162,6 @@ def calc_paths(maze, pos, direction, plot):
     return [p[:-1] for p in paths]
     
     
-    
-            
-            
-        
-# def shortest_path(maze, pos, direction, path):
-#     dups = [item for item, count in collections.Counter(path).items() if count > 1]
-#     if len(dups)>0:
-#         return path, 100000000 # intentionally large number
-#     if is_next_to_gate(maze, pos) == 'ZZ':
-#         return path, len(path)
-#     else:
-#         draw(maze, pos, direction)
-#         gate = is_next_to_gate(maze, pos)
-#         if len(gate)>0 and gate != 'AA':
-#             pos, direction = teleport(pos, gate)
-#         if is_intersection(maze, pos, direction):
-#             dirs = walkable_directions(maze, pos, direction)
-#             path_lengths = []
-#             paths = []
-#             for d in dirs:
-#                 new_pos = move_in_direction(pos, d)
-#                 if path[-1]!=pos:
-#                     path.append(pos)
-#                 path_cur, path_length_cur = shortest_path(maze, new_pos, d, path)
-#                 paths.append(path_cur)
-#                 path_lengths.append(path_length_cur)
-#                 ind = np.argmin(path_lengths)
-#                 #path_lengths.append(1+shortest_path(maze, new_pos, d, path))
-#             return paths[ind], min(path_lengths)
-#         else:
-#             d = walkable_directions(maze, pos, direction)[0]
-#             path.append(pos)
-#             path, path_length = shortest_path(maze, move_in_direction(pos, d), d, path)
-#             return path, path_length
-    
    
 # examples:
 if False:
@@ -264,8 +228,6 @@ if False:
         
 start = find_open_space_next_to_gate(maze, 'AA')[0]
 
-
-#min_path = shortest_path(maze, start[0], start[1], [])
 paths = calc_paths(maze, start[0], start[1], plot=False)
 path_lengths = [len(item)-1 for item in paths]
 
