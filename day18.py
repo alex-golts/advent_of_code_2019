@@ -1,151 +1,235 @@
-import random
-random.seed(1)
+from pathfinding.core.diagonal_movement import DiagonalMovement
+from pathfinding.core.grid import Grid
+from pathfinding.finder.a_star import AStarFinder
 from copy import deepcopy
+import numpy as np
 
-f = open('tmp.txt','r')
+f = open('input18.txt','r')
 txt = f.read()
 txt = txt.split('\n')
 maze = txt[:-1]
+
 # turn strings to list of chars (so that they can be changed)
 maze = [[c for c in maze[i]] for i in range(len(maze))]
-# add row of '#'s on top
-maze = [['#' for i in range(len(maze[0]))]]+ maze
 
+def direction2char(direction):
+    if direction.lower() == 'up':
+        return '^'
+    elif direction.lower() == 'down':
+        return 'v'
+    elif direction.lower() == 'left':
+        return '<'
+    elif direction.lower() == 'right':
+        return '>'
+    
+def draw(maze, pos, direction=None):
+    maze2 = maze.copy()
+    maze2 = [[c for c in maze2[i]] for i in range(len(maze2))]
+
+    if direction is not None:
+        maze2[pos[0]][pos[1]] = direction2char(direction)
+    s = ''
+    for i in range(len(maze2)):
+        print(s.join(maze2[i]))
+        
 def getStartPos(maze):
     for i in range(len(maze)):
         for j in range(len(maze[0])):
             if maze[i][j] == '@':
-                return (j, i)
-
-def getKeyPos(maze, key):
-    for i in range(len(maze)):
-        for j in range(len(maze[0])):
-            if maze[i][j] == key:
-                return (j, i)
-
-def removeKey(maze, key):
-    for i in range(len(maze)):
-        for j in range(len(maze[0])):
-            if maze[i][j].lower()==key.lower():
-                maze[i][j] = '.'
-    return maze
+                return (i, j)
 
 def countKeys(maze):
     cnt = 0
     keys = []
+    key_positions = []
+    doors = []
+    door_positions = []
     for i in range(len(maze)):
         for j in range(len(maze[0])):
-            if maze[i][j].islower():
+            if maze[i][j].islower() or maze[i][j]=='@':
                 cnt+=1
                 keys.append(maze[i][j])
-    return cnt, keys
+                key_positions.append((i, j))
+            if maze[i][j].isupper():
+                doors.append(maze[i][j])
+                door_positions.append((i, j))
+                
+    return cnt, keys, key_positions, doors, door_positions
 
-def doorNearby(maze, pos):
-    if maze[pos[1]][pos[0]-1].isupper():
-        return maze[pos[1]][pos[0]-1], (pos[0]-1, pos[1])
-    elif maze[pos[1]][pos[0]+1].isupper():
-        return maze[pos[1]][pos[0]+1], (pos[0]+1, pos[1])
-    elif maze[pos[1]-1][pos[0]].isupper():
-        return maze[pos[1]-1][pos[0]], (pos[0], pos[1]-1)
-    elif maze[pos[1]+1][pos[0]].isupper():
-        return maze[pos[1]+1][pos[0]], (pos[0], pos[1]+1)
-    else:
-        return '', pos
+def maze2bin(maze, collected_keys):
+    bin_maze = [[0 for j in range(len(maze[0]))] for i in range(len(maze))]
+    for i in range(len(maze)):
+        for j in range(len(maze[0])):
+            if maze[i][j] == '#' or (maze[i][j].isalpha() and maze[i][j].lower() not in collected_keys) or (maze[i][j]=='@' and maze[i][j] not in collected_keys):
+                bin_maze[i][j] = 0
+            elif maze[i][j] == '.' or (maze[i][j].isalpha() and maze[i][j].lower() in collected_keys) or (maze[i][j]=='@' and maze[i][j] in collected_keys):
+                bin_maze[i][j] = 1
+    return bin_maze
+
+def unfinished_paths(keys_collected, num_keys, path_lengths):
+    inds = [i for (i,j) in enumerate(keys_collected) if len(j)<num_keys]
+    return inds
+
+def remove_indices_from_list(lst, remove_indices):
+    lst_res =  [i for j, i in enumerate(lst) if j not in remove_indices]
+    return lst_res
+
+def dead_end(maze, pos):
+    cnt_walls = 0
     
-def keyNearby(maze, pos):
-    if maze[pos[1]][pos[0]-1].islower():
-        return maze[pos[1]][pos[0]-1], (pos[0]-1, pos[1])
-    elif maze[pos[1]][pos[0]+1].islower():
-        return maze[pos[1]][pos[0]+1], (pos[0]+1, pos[1])
-    elif maze[pos[1]-1][pos[0]].islower():
-        return maze[pos[1]-1][pos[0]], (pos[0], pos[1]-1)
-    elif maze[pos[1]+1][pos[0]].islower():
-        return maze[pos[1]+1][pos[0]], (pos[0], pos[1]+1)
-    else:
-        return '', pos
+    if maze[pos[0]][pos[1]] != '.':
+        return False
+    if maze[pos[0]][pos[1]+1] == '#':
+        cnt_walls += 1
+    if maze[pos[0]][pos[1]-1] == '#':
+        cnt_walls += 1
+    if maze[pos[0]+1][pos[1]] == '#':
+            cnt_walls += 1
+    if maze[pos[0]-1][pos[1]] == '#':
+        cnt_walls += 1
     
-def visibleKeys(maze, pos):
-    if countKeys(maze)[0]==1:
-        return countKeys(maze)[1]
-    start_pos = pos
-    cnt = 0
-    keys = []    
-    mazeOccupied = deepcopy(maze)
-    # try wandering around until 2 visible items are found (doors or keys)
-    while cnt<2:
-        if len(doorNearby(mazeOccupied, pos)[0]):
-            # replace found door position with occupied char, so that it doesn't get found again
-            mazeOccupied[doorNearby(mazeOccupied, pos)[1][1]][doorNearby(mazeOccupied, pos)[1][0]] = '&'
-            cnt+=1
-        if len(keyNearby(mazeOccupied, pos)[0]):
-            cnt+=1
-            keys.append(keyNearby(mazeOccupied, pos)[0])
-            # replace found key position with occupied char
-            mazeOccupied[keyNearby(mazeOccupied, pos)[1][1]][keyNearby(mazeOccupied, pos)[1][0]] = '&'
-        if cnt<2:
-            #r = random.randint(1,4)
-            #if r==1: # left
-            if mazeOccupied[pos[1]][pos[0]-1] == '.':
-                    pos = (pos[0]-1, pos[1])
-            #elif r==2: # right
-            elif mazeOccupied[pos[1]][pos[0]+1] == '.':
-                    pos = (pos[0]+1, pos[1])
-            #elif r==3: # up
-            elif mazeOccupied[pos[1]-1][pos[0]] == '.':
-                    pos = (pos[0], pos[1]-1)
-            #elif r==4: # down
-            elif mazeOccupied[pos[1]+1][pos[0]] == '.':
-                    pos = (pos[0], pos[1]+1)
-            else:
-                pos = start_pos
-    return keys
-
-
-def getKey(maze, pos, key):
-    success = False
-    num_steps = 1
-    start_pos = pos
-    mazeOccupied = deepcopy(maze)
-    while not success:
-        if keyNearby(mazeOccupied, pos)[0] == key:
-            #done = True
-            success = True
-            break
-        mazeOccupied[pos[1]][pos[0]] = '&'
-        if mazeOccupied[pos[1]][pos[0]-1] == '.':
-            pos = (pos[0]-1, pos[1])
-            num_steps+=1
-        elif mazeOccupied[pos[1]][pos[0]+1] == '.':
-            pos = (pos[0]+1, pos[1])
-            num_steps+=1
-        elif mazeOccupied[pos[1]-1][pos[0]] == '.':
-            pos = (pos[0], pos[1]-1)
-            num_steps+=1
-        elif mazeOccupied[pos[1]+1][pos[0]] == '.':
-            pos = (pos[0], pos[1]+1)
-            num_steps += 1
-        else:
-            pos = start_pos
-            num_steps = 1
-    pos = keyNearby(maze, pos)[1]
-    maze = removeKey(maze, key)
-    return maze, num_steps, pos
-
-# points are defined as (x,y) tuple
-def countShortestPath(maze, pos):
-    keys = visibleKeys(maze, pos)
-    import pdb
-    pdb.set_trace()
-    if countKeys(maze)[0]==1:
-        _, num_steps, _ = getKey(maze, pos, keys[0])
-        return num_steps
+    if cnt_walls == 3:
+        return True
     else:
-        paths = []
-        for key in keys:
-            maze, num_steps, pos = getKey(maze, pos, key)
-            paths.append(num_steps + countShortestPath(maze, pos))
-        return min(paths)
+        return False
+    
+def remove_dead_ends(maze):
+    num_dead_ends = 100 # init
+    cnt=0
+    while num_dead_ends>0:
+        for i in range(1, len(maze)-1):
+            for j in range(1, len(maze[0])-1):
+                if dead_end(maze,(i,j)):
+                    cnt+=1
+                    maze[i][j] = '#'
+        num_dead_ends = cnt
+        cnt=0
+    return maze
+
+def keys_on_path(path):
+    res = []
+    for p in path[1:-1]:
+        if p in key_positions:
+            res.append(all_keys[key_positions.index(p)])
+        if p in door_positions:
+            res.append(all_doors[door_positions.index(p)].lower())
+    return res
+
+
+def calc_dist_mat(maze):
+    dist_mat = {}
+    middle_keys = {}
+    finder = AStarFinder(diagonal_movement=DiagonalMovement.never)
+    for i,k1 in enumerate(all_keys):
+        for j,k2 in enumerate(all_keys):
+            if k1==k2 or frozenset((k1,k2)) in dist_mat:
+                continue
+            start_pos = key_positions[all_keys.index(k1)]
+            end_pos = key_positions[all_keys.index(k2)]
+            bin_maze = maze2bin(maze, all_keys)
+            bin_maze[end_pos[0]][end_pos[1]] = 1
+            grid = Grid(matrix=bin_maze)
+            start = grid.node(start_pos[1], start_pos[0])
+            end = grid.node(end_pos[1], end_pos[0])
+            path, runs = finder.find_path(start, end, grid)
+            path = [p[::-1] for p in path]
+            path_len = len(path)-1
+            middle_keys[frozenset((k1,k2))] = frozenset(keys_on_path(path))
+            dist_mat[frozenset((k1,k2))] = path_len
+    return dist_mat, middle_keys
             
+def reachable_from(key, collected_keys):
+    res = []
+    for k in frozenset(all_keys)-frozenset(('@',)):
+        if k==key:
+            continue
+        mid_keys = middle_keys[frozenset((key, k))] - frozenset(('@',))
+        if mid_keys.issubset(frozenset(collected_keys)):
+            res.append(k)
+    return res
+    
+def calc_shortest_path(maze, pos, memo=True):
+    cur_pos = pos
+    positions = [cur_pos]
+    path_lengths = [0]
+    keys_collected = [['@']]
+    start_key = '@'
+    cnt=0
+    while len(unfinished_paths(keys_collected, num_keys, path_lengths)) > 0:
+        inds = unfinished_paths(keys_collected, num_keys, path_lengths)
+        start_pos = positions[inds[0]]
+        start_key = '@' if cnt==0 else all_keys[key_positions.index(start_pos)]
+        cnt_visible_keys = 0
+        cur_keys = deepcopy(keys_collected[inds[0]])
+        cur_path_len = path_lengths[inds[0]]
+        for k in frozenset(reachable_from(start_key, cur_keys))-frozenset(keys_collected[inds[0]]):
+            end_pos = key_positions[all_keys.index(k)]
+            path_len = dist_mat.get((frozenset((start_key, k))))
+            if cnt_visible_keys == 0 and path_len>0:
+                keys_collected[inds[0]].append(k)
+                path_lengths[inds[0]] += path_len
+                positions[inds[0]] = end_pos
+                cnt_visible_keys += 1
+            elif path_len>0:
+                keys_collected.append(cur_keys + [k])
+                path_lengths.append(cur_path_len + path_len)
+                positions.append(end_pos)
+        if path_len<=0 and cnt_visible_keys == 0:
+            positions.pop(inds[0])
+            keys_collected.pop(inds[0])
+            path_lengths.pop(inds[0])
+        cnt +=1
+        num_finished = len([k for k in keys_collected if len(k)==num_keys])
+        if num_finished>0:
+        #     t1=time()
+            inds_finished = [i for i,k in enumerate(keys_collected) if len(k)==num_keys]
+            lens_finished = [path_lengths[i] for i in inds_finished]
+            min_len_finished = min(lens_finished)
+            print(f'shortest path so far: {min_len_finished}')
+        
+    return path_lengths, keys_collected
+            
+
+def distanceToCollectKeys(currentKey, keys, cache): 
+
+    if len(keys)==0:
+        return 0
+    
+    cacheKey = (currentKey, keys)
+    if cacheKey in cache:
+        return cache[cacheKey]
+    
+    result = np.inf
+    keys_collected = frozenset(all_keys)-keys
+    for key in frozenset(reachable_from(currentKey, keys_collected-frozenset(('@',)))) - keys_collected:
+       d = dist_mat[frozenset((currentKey, key))] + distanceToCollectKeys(key, keys - frozenset((key,)), cache)
+       result = min(result, d)
+
+    cache[cacheKey] = result
+    return result
+
+# remove dead ends - hopefully this saves some time:
+maze = remove_dead_ends(maze)
+
+# get start position
 start_pos = getStartPos(maze)
-maze[start_pos[1]][start_pos[0]] = '.'
-print('part 1 answer = ' + str(countShortestPath(maze, start_pos)))
+
+# get all keys, doors and respective positions
+num_keys, all_keys, key_positions, all_doors, door_positions = countKeys(maze)
+
+# pre-calculate a shortest distance map between all pairs of keys
+# and a list of all keys/doors in between.
+# a KEY observation is that there is always only one path between 
+# each pair of keys, no matter how many keys one has collected so far!
+dist_mat, middle_keys = calc_dist_mat(maze)
+
+
+# this is my best attemp before finally resorting to the solution here:
+# https://www.reddit.com/r/adventofcode/comments/ec8090/2019_day_18_solutions/fbd8y0b/
+# it does not scale well even though I used memoization. probably some other bug...
+
+#path_lengths, keys_collected = calc_shortest_path(maze, start_pos, memo=True)
+#print(f'part 1 answer = {min(path_lengths)}')
+
+min_path = distanceToCollectKeys('@',frozenset(all_keys)-frozenset(('@',)), {})
+print(f'part 1 answer = {min_path}')
