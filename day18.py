@@ -4,7 +4,7 @@ from pathfinding.finder.a_star import AStarFinder
 from copy import deepcopy
 import numpy as np
 
-f = open('input18.txt','r')
+f = open('tmp8.txt','r')
 txt = f.read()
 txt = txt.split('\n')
 maze = txt[:-1]
@@ -33,10 +33,14 @@ def draw(maze, pos, direction=None):
         print(s.join(maze2[i]))
         
 def getStartPos(maze):
+    res = []
+    symbols = []
     for i in range(len(maze)):
         for j in range(len(maze[0])):
-            if maze[i][j] == '@':
-                return (i, j)
+            if maze[i][j] in ('@', '!', '$', '%'):
+                res.append((i, j))
+                symbols.append(maze[i][j])
+    return res, symbols
 
 def countKeys(maze):
     cnt = 0
@@ -46,7 +50,7 @@ def countKeys(maze):
     door_positions = []
     for i in range(len(maze)):
         for j in range(len(maze[0])):
-            if maze[i][j].islower() or maze[i][j]=='@':
+            if maze[i][j].islower() or maze[i][j] in ('@', '!', '$', '%'):
                 cnt+=1
                 keys.append(maze[i][j])
                 key_positions.append((i, j))
@@ -135,17 +139,32 @@ def calc_dist_mat(maze):
             path = [p[::-1] for p in path]
             path_len = len(path)-1
             middle_keys[frozenset((k1,k2))] = frozenset(keys_on_path(path))
-            dist_mat[frozenset((k1,k2))] = path_len
+            dist_mat[frozenset((k1,k2))] = path_len if path_len>0 else np.inf
     return dist_mat, middle_keys
             
 def reachable_from(key, collected_keys):
     res = []
-    for k in frozenset(all_keys)-frozenset(('@',)):
+    for k in frozenset(all_keys)-frozenset(('!', '@', '$', '%')):
         if k==key:
             continue
-        mid_keys = middle_keys[frozenset((key, k))] - frozenset(('@',))
+        if np.isnan(dist_mat[frozenset((key,k))]) or dist_mat[frozenset((key,k))]==np.inf or dist_mat[frozenset((key,k))]<=0:
+            continue
+        mid_keys = middle_keys[frozenset((key, k))] - frozenset(('!', '@', '$', '%'))
         if mid_keys.issubset(frozenset(collected_keys)):
             res.append(k)
+    return res
+
+def reachable_from_robots(key_tup, collected_keys):
+    res = []
+    for k in frozenset(all_keys)-frozenset(('!', '@', '$', '%'))-frozenset(collected_keys):
+        for i,key in enumerate(key_tup):
+            if k == key:
+                continue
+            if np.isnan(dist_mat[frozenset((key,k))]) or dist_mat[frozenset((key,k))]==np.inf or dist_mat[frozenset((key,k))]<=0:
+                continue
+            mid_keys = middle_keys[frozenset((key, k))] - frozenset(('!', '@', '$', '%'))
+            if mid_keys.issubset(frozenset(collected_keys)):
+                res.append((i, k))
     return res
     
 def calc_shortest_path(maze, pos, memo=True):
@@ -208,11 +227,103 @@ def distanceToCollectKeys(currentKey, keys, cache):
     cache[cacheKey] = result
     return result
 
+
+def distanceToCollectKeys_robots2(currentKey, keys, cache): 
+
+    if len(keys)==0:
+        return 0
+    
+    cacheKey = (currentKey, keys)
+    if cacheKey in cache:
+        return cache[cacheKey]
+    
+    #import pdb
+    #pdb.set_trace()
+    result = np.inf
+    keys_collected = frozenset(all_keys)-keys
+    # reachable_from_robots returns a list of tuples (i, key) where i 
+    # is the robot id - 0,1,2,3, and key is the key visible from it
+    for key in frozenset(reachable_from_robots(currentKey, keys_collected-frozenset(('!', '@', '$', '%')))) - keys_collected:
+       newCurrentKey = deepcopy(list(currentKey))
+       newCurrentKey[key[0]] = key[1]
+       newCurrentKey = tuple(newCurrentKey)
+       d = dist_mat[frozenset((currentKey[key[0]], key[1]))] + distanceToCollectKeys_robots2(newCurrentKey, keys - frozenset((key[1],)), cache)
+       result = min(result, d)
+    cache[cacheKey] = result
+    return result
+
+
+
+def distanceToCollectKeys_robots(currentKey, keys, cache): 
+
+    keys_all = frozenset().union(*list(keys))
+    if len(keys_all)==0:
+        return 0
+    
+    cacheKey0 = (currentKey[0], keys[0])
+    if cacheKey0 in cache[0]:
+        result0 = cache[0][cacheKey0]
+    else:
+        result0 = np.nan
+        keys_collected0 = frozenset(all_keys)-keys[0]
+        for key in frozenset(reachable_from(currentKey[0], keys_collected0-frozenset(('!',)))) - keys_collected0:
+            inp1 = (key, currentKey[1], currentKey[2], currentKey[3])
+            inp2 = (keys[0]-frozenset((key,)), keys[1], keys[2], keys[3])
+            d = np.nansum(np.array([dist_mat[frozenset((currentKey[0], key))], distanceToCollectKeys_robots(inp1, inp2, cache)]))
+            result0 = np.nanmin(np.array([result0, d]))
+        cache[0][cacheKey0] = result0
+        
+        
+    cacheKey1 = (currentKey[1], keys[1])
+    if cacheKey1 in cache[1]:
+        result1 = cache[1][cacheKey1]
+    else:
+        result1 = np.nan
+        keys_collected1 = frozenset(all_keys)-keys[1] 
+        for key in frozenset(reachable_from(currentKey[1], keys_collected1-frozenset(('@',)))) - keys_collected1:
+            inp1 = (currentKey[0], key, currentKey[2], currentKey[3])
+            inp2 = (keys[0], keys[1]-frozenset((key,)), keys[2], keys[3])
+            d = np.nansum(np.array([dist_mat[frozenset((currentKey[1], key))], distanceToCollectKeys_robots(inp1, inp2, cache)]))
+            result1 = np.nanmin(np.array([result1, d]))
+        cache[1][cacheKey1] = result1
+        
+        
+    cacheKey2 = (currentKey[2], keys[2])
+    if cacheKey2 in cache[2]:
+        result2 = cache[2][cacheKey2]
+    else:
+        result2 = np.nan
+        keys_collected2 = frozenset(all_keys)-keys[2]
+        for key in frozenset(reachable_from(currentKey[2], keys_collected2-frozenset(('$',)))) - keys_collected2:
+            inp1 = (currentKey[0], currentKey[1], key, currentKey[3])
+            inp2 = (keys[0], keys[2], keys[2]-frozenset((key,)), keys[3])
+            d = np.nansum(np.array([dist_mat[frozenset((currentKey[2], key))], distanceToCollectKeys_robots(inp1, inp2, cache)]))
+            result2 = np.nanmin(np.array([result2, d]))
+        cache[2][cacheKey2] = result2
+    
+    
+    cacheKey3 = (currentKey[3], keys[3])
+    if cacheKey3 in cache[3]:
+        result3 = cache[3][cacheKey3]
+    else:
+        result3 = np.nan
+        keys_collected3 = frozenset(all_keys)-keys[3]
+        for key in frozenset(reachable_from(currentKey[3], keys_collected3-frozenset(('%',)))) - keys_collected3:
+            inp1 = (currentKey[0], currentKey[1], currentKey[2], key)
+            inp2 = (keys[0], keys[2], keys[2], keys[3]-frozenset((key,)))
+            d = np.nansum(np.array([dist_mat[frozenset((currentKey[3], key))], distanceToCollectKeys_robots(inp1, inp2, cache)]))
+            result3 = np.nanmin(np.array([result3, d]))
+        cache[3][cacheKey3] = result3
+    
+    return np.nanmin(np.array([result0, result1, result2, result3]))
+    
+
 # remove dead ends - hopefully this saves some time:
 maze = remove_dead_ends(maze)
 
 # get start position
-start_pos = getStartPos(maze)
+start_pos, _ = getStartPos(maze)
+start_pos = start_pos[0]
 
 # get all keys, doors and respective positions
 num_keys, all_keys, key_positions, all_doors, door_positions = countKeys(maze)
@@ -231,5 +342,38 @@ dist_mat, middle_keys = calc_dist_mat(maze)
 #path_lengths, keys_collected = calc_shortest_path(maze, start_pos, memo=True)
 #print(f'part 1 answer = {min(path_lengths)}')
 
-min_path = distanceToCollectKeys('@',frozenset(all_keys)-frozenset(('@',)), {})
-print(f'part 1 answer = {min_path}')
+if False:
+    min_path = distanceToCollectKeys('@',frozenset(all_keys)-frozenset(('@',)), {})
+    print(f'part 1 answer = {min_path}')
+
+# part 2:
+
+# change maze - use 4 distinct start key symbols - !,@,$,%:
+if False:
+    maze[start_pos[0]][start_pos[1]] = '#'
+    maze[start_pos[0]-1][start_pos[1]] = '#'
+    maze[start_pos[0]+1][start_pos[1]] = '#'
+    maze[start_pos[0]][start_pos[1]-1] = '#'
+    maze[start_pos[0]][start_pos[1]+1] = '#'
+    maze[start_pos[0]-1][start_pos[1]-1] = '!'
+    maze[start_pos[0]+1][start_pos[1]+1] = '@'
+    maze[start_pos[0]-1][start_pos[1]+1] = '$'
+    maze[start_pos[0]+1][start_pos[1]-1] = '%'
+
+if True:
+    start_pos, start_keys = getStartPos(maze)
+    num_keys, all_keys, key_positions, all_doors, door_positions = countKeys(maze)
+    dist_mat, middle_keys = calc_dist_mat(maze)
+    
+    #import pdb
+    #pdb.set_trace()
+    #bla = reachable_from_robots(('c', '@', '$', 'b'), frozenset({'%', '@', 'a', '!', '$', 'c', 'b'}))
+    
+    min_path = distanceToCollectKeys_robots2(('!','@','$','%'), frozenset(all_keys)-frozenset(('!', '@', '$', '%')), {})
+    # min_path = distanceToCollectKeys_robots(('!','@','$','%'), \
+    #                                  (frozenset(all_keys)-frozenset(('!',)), \
+    #                                   frozenset(all_keys)-frozenset(('@',)), \
+    #                                   frozenset(all_keys)-frozenset(('$',)), \
+    #                                   frozenset(all_keys)-frozenset(('%',))), ({}, {}, {}, {}))
+    
+    print(f'part 2 answer = {min_path}')
